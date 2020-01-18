@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using WebApplication1.Controllers;
 
 namespace WebApplication1
 {
@@ -18,7 +20,10 @@ namespace WebApplication1
                 .AddEnvironmentVariables(prefix: "ASPNETCORE_")
                 .Build();
             var host = CreateHostBuilder(config).Build();
+            var cancel = new CancellationTokenSource();
+            var tp = new ThreadHostedTimer(cancel.Token);
             host.Run();
+            cancel.Cancel();
         }
 
 

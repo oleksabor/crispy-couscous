@@ -20,8 +20,8 @@ namespace WebApplication1
         public TimedHostedService(ILogger<TimedHostedService> logger)
         {
             _logger = logger;
-
-            profiler = MiniProfiler.Current ?? MiniProfiler.StartNew("TimedHostedService");
+            //http://localhost:55694/mini-profiler-resources/results-index
+            profiler = MiniProfiler.Current ?? MiniProfiler.StartNew("hostedService");
         }
 
         public Task StartAsync(CancellationToken stoppingToken)
@@ -47,8 +47,9 @@ namespace WebApplication1
             {
                 _logger.LogInformation(profiler.RenderPlainText());
                 profiler.Stop();
+                var type = MiniProfiler.Current?.GetType()?.Name;
 
-                profiler = MiniProfiler.StartNew($"TimedHostedService {executionCount}");
+                profiler = MiniProfiler.StartNew($"hostedService {type} {executionCount}");
             }
             
         }
