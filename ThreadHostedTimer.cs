@@ -11,16 +11,18 @@ namespace WebApplication1.Controllers
 {
     public class ThreadHostedTimer
     {
-        public ThreadHostedTimer(CancellationToken token)
+        public ThreadHostedTimer(CancellationToken token, Func<MiniProfilerContainer> factory)
         {
             var timer = Task.Run(() => DoWork(null), token);
  
             random = new Random();
             this.token = token;
+            this.factory = factory;
         }
         int callCount;
         Random random;
         private readonly CancellationToken token;
+        private readonly Func<MiniProfilerContainer> factory;
 
         void DoWork(object state)
         {
@@ -51,12 +53,12 @@ namespace WebApplication1.Controllers
 
         MiniProfiler calInside(int idx)
         {
-            var mp = MiniProfiler.StartNew($"inside of {idx}");
+            var mp = factory();
             mp.Inline(() => Sleep(2, 5, 20), "inside inline");
             using (mp.Step("inside step"))
                 Sleep(2, 4, 10);
             // mp.Stop();
-            return mp;
+            return mp.GetProfiler();
         } 
     }
 

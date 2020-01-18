@@ -21,7 +21,9 @@ namespace WebApplication1
                 .Build();
             var host = CreateHostBuilder(config).Build();
             var cancel = new CancellationTokenSource();
-            var tp = new ThreadHostedTimer(cancel.Token);
+
+            
+            var tp = new ThreadHostedTimer(cancel.Token, () => new MiniProfilerContainer());
             host.Run();
             cancel.Cancel();
         }
