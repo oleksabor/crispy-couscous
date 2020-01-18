@@ -18,10 +18,18 @@ namespace WebApplication1.Controllers
 
         static long index = 0; 
 
+        object instanceLock = new object();
+
         public MiniProfiler GetProfiler()
         {
-            return profiler = profiler ?? MiniProfiler.StartNew($"container {Interlocked.Increment(ref index)}");
+            if (profiler == null)
+            lock (instanceLock)
+            if (profiler == null)
+            profiler = MiniProfiler.StartNew($"contained {Interlocked.Increment(ref index)}");
+            return profiler;
         }
+
+        public string Name => GetProfiler().Name;
 
         public IDisposable Step(string name)
         {

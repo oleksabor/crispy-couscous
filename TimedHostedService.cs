@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Profiling;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using WebApplication1.Controllers;
 
 namespace WebApplication1
 {
@@ -14,14 +16,14 @@ namespace WebApplication1
     {
         private int executionCount = 0;
         private readonly ILogger<TimedHostedService> _logger;
+        private readonly IServiceProvider provider;
         private Timer _timer;
-        MiniProfiler profiler;
 
-        public TimedHostedService(ILogger<TimedHostedService> logger)
+        public TimedHostedService(ILogger<TimedHostedService> logger, IServiceProvider provider)
         {
             _logger = logger;
+            this.provider = provider;
             //http://localhost:55694/mini-profiler-resources/results-index
-            profiler = MiniProfiler.Current ?? MiniProfiler.StartNew("hostedService");
         }
 
         public Task StartAsync(CancellationToken stoppingToken)
@@ -29,29 +31,27 @@ namespace WebApplication1
             _logger.LogInformation("Timed Hosted Service running.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(2));
+                TimeSpan.FromSeconds(6));
 
             return Task.CompletedTask;
         }
 
         private void DoWork(object state)
         {
-            using (profiler.Step($"DoWork {executionCount}"))
+            using (var scope = provider.CreateScope()) //like when asp.net controller's method is executed
             {
-                var count = Interlocked.Increment(ref executionCount);
-                Thread.Sleep(60);
-                _logger.LogInformation(
-                    "Timed Hosted Service is working. Count: {Count}", count);
-            }
-            if ((executionCount % 10) == 0)
-            {
-                _logger.LogInformation(profiler.RenderPlainText());
+                var profiler = scope.ServiceProvider.GetService<MiniProfilerContainer>().GetProfiler();
+                using (profiler.Step($"DoWork {executionCount}"))
+                {
+                    var count = Interlocked.Increment(ref executionCount);
+                    Thread.Sleep(60);
+                    _logger.LogInformation(
+                        "Timed Hosted Service is working. Count: {Count}", count);
+                }
+                var uow = new UnitOfWork(MiniProfiler.StartNew("uow"));
+                profiler.AddProfilerResults(uow.calInside(executionCount));
                 profiler.Stop();
-                var type = MiniProfiler.Current?.GetType()?.Name;
-
-                profiler = MiniProfiler.StartNew($"hostedService {type} {executionCount}");
             }
-            
         }
 
         public Task StopAsync(CancellationToken stoppingToken)

@@ -9,52 +9,64 @@ using StackExchange.Profiling;
 
 namespace WebApplication1.Controllers
 {
-	[ApiController]
-	[Route("[controller]")]
-	public class WeatherForecastController : ControllerBase
-	{
-		private static readonly string[] Summaries = new[]
-		{
-			"Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-		};
+    [ApiController]
+    [Route("[controller]")]
+    public class WeatherForecastController : ControllerBase
+    {
+        private static readonly string[] Summaries = new[]
+        {
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        };
 
-		private readonly ILogger<WeatherForecastController> _logger;
+        private readonly ILogger<WeatherForecastController> _logger;
+        private readonly MiniProfilerContainer profilerContainer;
 
-		public WeatherForecastController(ILogger<WeatherForecastController> logger)
-		{
-			_logger = logger;
-		}
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, MiniProfilerContainer profilerContainer)
+        {
+            _logger = logger;
+            this.profilerContainer = profilerContainer;
+        }
 
-		[HttpGet]
-		public IEnumerable<WeatherForecast> Get()
-		{
-			using (MiniProfiler.Current.Step("forecasting"))
-			{
-				Thread.Sleep(60);
-				var rng = new Random();
-				using (MiniProfiler.Current.Step("returning"))
-				{
-					Thread.Sleep(70);
+        [HttpGet]
+        public IEnumerable<WeatherForecast> Get()
+        {
+			var scoped = MiniProfiler.Current;
+			scoped.Inline(() => Slowpoke.Sleep(3, 4, 20), "slow with MiniProvider.Current");
+            try
+            {
 
-					return Enumerable.Range(1, 5).Select(index => CreateForecast(index, rng))
-					.ToArray();
-				}
-			}
-		}
+                using (profilerContainer.Step("forecasting"))
+                {
+                    Thread.Sleep(15);
+                    var rng = new Random();
+                    using (profilerContainer.Step("returning"))
+                    {
+                        Thread.Sleep(70);
 
-		public WeatherForecast CreateForecast(int index, Random rng)
-		{
-			var d = DateTime.Now.AddDays(index);
-			using (MiniProfiler.Current.Step($"forecast for {d.DayOfWeek}"))
-			{
-				Thread.Sleep(index * 80);
-				return new WeatherForecast
-				{
-					Date = d,
-					TemperatureC = rng.Next(-20, 55),
-					Summary = Summaries[rng.Next(Summaries.Length)]
-				};
-			}
-		}
-	}
+                        return Enumerable.Range(1, 5).Select(index => CreateForecast(index, rng))
+                        .ToArray();
+                    }
+                }
+            }
+            finally
+            {
+                scoped.AddProfilerResults(profilerContainer.GetProfiler());
+            }
+        }
+
+        public WeatherForecast CreateForecast(int index, Random rng)
+        {
+            var d = DateTime.Now.AddDays(index);
+            using (MiniProfiler.Current.Step($"forecast for {d.DayOfWeek}"))
+            {
+                Thread.Sleep(index * 80);
+                return new WeatherForecast
+                {
+                    Date = d,
+                    TemperatureC = rng.Next(-20, 55),
+                    Summary = Summaries[rng.Next(Summaries.Length)]
+                };
+            }
+        }
+    }
 }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using WebApplication1.Controllers;
 
 namespace WebApplication1
 {
@@ -27,6 +28,7 @@ namespace WebApplication1
 			services.AddMvc();
 			services.AddControllers();
 			services.AddMiniProfiler();
+			services.AddScoped<MiniProfilerContainer>();
 			services.AddHostedService<TimedHostedService>();
 		}
 
